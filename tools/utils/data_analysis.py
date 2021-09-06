@@ -29,6 +29,11 @@ import shap
 import folium
 import geopy
 
+
+###############################################################################
+#                       DATA ANALYSIS                                         #
+###############################################################################
+
 def utils_recognize_type(dtf, col, max_cat=20):
     """
     Recognize whether a column is numerical or categorical.
@@ -201,7 +206,7 @@ def bivariate_plot(dtf, x, y, max_cat=20, figsize=(10,5)):
         :param x: str - column
         :param y: str - column
         :param max_cat: num - max number of uniques to consider a numerical variable as categorical
-    '''    
+    '''
     try:
         ## num vs num --> stacked + scatter with density
         if (utils_recognize_type(dtf, x, max_cat) == "num") & (utils_recognize_type(dtf, y, max_cat) == "num"):
@@ -226,22 +231,24 @@ def bivariate_plot(dtf, x, y, max_cat=20, figsize=(10,5)):
             fig.suptitle(x+"   vs   "+y, fontsize=20)
             ### count
             ax[0].title.set_text('count')
-            order = dtf.groupby(x)[y].count().index.tolist()
-            sns.catplot(x=x, hue=y, data=dtf, kind='count', order=order, ax=ax[0])
+            order = dtf.groupby(x)[y].count().index.tolist()     
+            a = dtf.groupby(x)[y].count().reset_index()
+            a = a.rename(columns={y:"tot"})    
+            aa = dtf.groupby([x,y])[y].count()   
+            aa = aa.reset_index(name="count")                 
+            sns.barplot(x=x, y="count", hue=y, data=aa, ax=ax[0], order=order)
             ax[0].grid(True)
             ### percentage
             ax[1].title.set_text('percentage')
-            a = dtf.groupby(x)[y].count().reset_index()
-            a = a.rename(columns={y:"tot"})
             b = dtf.groupby([x,y])[y].count()
-            b = b.rename(columns={y:0}).reset_index()
+            b = b.reset_index(name="count")
             b = b.merge(a, how="left")
-            b["%"] = b[0] / b["tot"] *100
-            sns.barplot(x=x, y="%", hue=y, data=b, ax=ax[1]).get_legend().remove()
+            b["%"] = b["count"] / b["tot"] *100
+            sns.barplot(x=x, y="%", hue=y, data=b, ax=ax[1], order= order).get_legend().remove()
             ax[1].grid(True)
             ### fix figure
-            plt.close(2)
-            plt.close(3)
+            # plt.close(2)
+            # plt.close(3)
             plt.show()
     
         ## num vs cat --> density + stacked + boxplot 
@@ -269,7 +276,7 @@ def bivariate_plot(dtf, x, y, max_cat=20, figsize=(10,5)):
             tmp.drop("tot", axis=1)[sorted(dtf[cat].unique())].plot(kind='bar', stacked=True, ax=ax[1], legend=False, grid=True)
             ### boxplot   
             ax[2].title.set_text('outliers')
-            sns.catplot(x=cat, y=num, data=dtf, kind="box", ax=ax[2], order=sorted(dtf[cat].unique()))
+            sns.boxplot(x=cat, y=num, data=dtf, ax=ax[2], order=sorted(dtf[cat].unique()))
             ax[2].grid(True)
             ### fix figure
             plt.close(2)
@@ -278,8 +285,8 @@ def bivariate_plot(dtf, x, y, max_cat=20, figsize=(10,5)):
         
     except Exception as e:
         print("--- got error ---")
-        print(e)
-        
+        print(e)        
+
 
 def nan_analysis(dtf, na_x, y, max_cat=20, figsize=(10,5)):
     '''
@@ -299,6 +306,7 @@ def ts_analysis(dtf, x, y, max_cat=20, figsize=(10,5)):
     else:
         dtf_tmp = dtf.groupby(x)[y].median()
     dtf_tmp.plot(title=y+" by "+x, figsize=figsize, grid=True)
+    plt.show()
 
 
 def cross_distributions(dtf, x1, x2, y, max_cat=20, figsize=(10,5)):
@@ -327,7 +335,7 @@ def cross_distributions(dtf, x1, x2, y, max_cat=20, figsize=(10,5)):
             fig, ax = plt.subplots(figsize=figsize)
             sns.boxplot(x=cat, y=num, hue=y, data=dtf, ax=ax).set_title(x1+'  vs  '+x2+'  (filter: '+y+')')
             ax.grid(True)
-    
+        plt.show()
     ## Y num
     else:
         ### all num --> 3D scatter plot
@@ -338,11 +346,11 @@ def cross_distributions(dtf, x1, x2, y, max_cat=20, figsize=(10,5)):
         fig.colorbar(plot3d, shrink=0.5, aspect=5, label=y)
         ax.set(xlabel=x1, ylabel=x2, zlabel=y)
         plt.show()
-
+     
 
 ###############################################################################
 #                         CORRELATION                                         #
-###############################################################################        
+###############################################################################  
 
 def corr_matrix(dtf, method="pearson", negative=True, lst_filters=[], annotation=True, figsize=(10,5)):    
     '''
@@ -366,20 +374,168 @@ def corr_matrix(dtf, method="pearson", negative=True, lst_filters=[], annotation
     fig, ax = plt.subplots(figsize=figsize)
     sns.heatmap(dtf_corr, annot=annotation, fmt='.2f', cmap="YlGnBu", ax=ax, cbar=True, linewidths=0.5)
     plt.title(method + " correlation")
+    plt.show()
     return dtf_corr
-
 
 
 def pps_matrix(dtf, annotation=True, lst_filters=[], figsize=(10,5)):
     '''
     Computes the pps matrix.
-    '''
+    :parameter
+        :param dtf: dataframe - feature matrix dtf
+    '''    
     dtf_pps = ppscore.matrix(dtf) if len(lst_filters) == 0 else ppscore.matrix(dtf).loc[lst_filters]
+    dtf_pps = dtf_pps[['x', 'y', 'ppscore']].pivot(columns='x', index='y', values='ppscore')
     fig, ax = plt.subplots(figsize=figsize)
     sns.heatmap(dtf_pps, vmin=0., vmax=1., annot=annotation, fmt='.2f', cmap="YlGnBu", ax=ax, cbar=True, linewidths=0.5)
+    # sns.heatmap(dtf_pps, vmin=0, vmax=1, cmap="Blues", linewidths=0.5, annot=True)
     plt.title("predictive power score")
+    plt.show()
     return dtf_pps
 
+
+def test_corr(dtf, x, y, max_cat=20):
+    '''
+    Computes correlation/dependancy and p-value (prob of happening something different than what observed in the sample)
+    '''
+    ## num vs num --> pearson
+    if (utils_recognize_type(dtf, x, max_cat) == "num") & (utils_recognize_type(dtf, y, max_cat) == "num"):
+        dtf_noNan = dtf[dtf[x].notnull()]  #can't have nan
+        coeff, p = scipy.stats.pearsonr(dtf_noNan[x], dtf_noNan[y])
+        coeff, p = round(coeff, 3), round(p, 3)
+        conclusion = "Significant" if p < 0.05 else "Non-Significant"
+        print("Pearson Correlation:", coeff, conclusion, "(p-value: "+str(p)+")")
+    
+    ## cat vs cat --> cramer (chiquadro)
+    elif (utils_recognize_type(dtf, x, max_cat) == "cat") & (utils_recognize_type(dtf, y, max_cat) == "cat"):
+        cont_table = pd.crosstab(index=dtf[x], columns=dtf[y])
+        chi2_test = scipy.stats.chi2_contingency(cont_table)
+        chi2, p = chi2_test[0], chi2_test[1]
+        n = cont_table.sum().sum()
+        phi2 = chi2/n
+        r,k = cont_table.shape
+        phi2corr = max(0, phi2-((k-1)*(r-1))/(n-1))
+        rcorr = r-((r-1)**2)/(n-1)
+        kcorr = k-((k-1)**2)/(n-1)
+        coeff = np.sqrt(phi2corr/min((kcorr-1), (rcorr-1)))
+        coeff, p = round(coeff, 3), round(p, 3)
+        conclusion = "Significant" if p < 0.05 else "Non-Significant"
+        print("Cramer Correlation:", coeff, conclusion, "(p-value: "+str(p)+")")
+    
+    ## num vs cat --> 1way anova (f: the means of the groups are different)
+    else:
+        if (utils_recognize_type(dtf, x, max_cat) == "cat"):
+            cat,num = x,y
+        else:
+            cat,num = y,x
+        model = smf.ols(num+' ~ '+cat, data=dtf).fit()
+        table = sm.stats.anova_lm(model)
+        p = table["PR(>F)"][0]
+        coeff, p = None, round(p, 3)
+        conclusion = "Correlated" if p < 0.05 else "Non-Correlated"
+        print("Anova F: the variables are", conclusion, "(p-value: "+str(p)+")")
+        
+    return coeff, p
+
+
+###############################################################################
+#                       PREPROCESSING                                         #
+###############################################################################
+
+def dtf_partitioning(dtf, y, test_size=0.3, shuffle=False):
+    '''
+    Split the dataframe into train / test
+    '''
+    dtf_train, dtf_test = model_selection.train_test_split(dtf, test_size=test_size, shuffle=shuffle) 
+    print("X_train shape:", dtf_train.drop(y, axis=1).shape, "| X_test shape:", dtf_test.drop(y, axis=1).shape)
+    print("y_train mean:", round(np.mean(dtf_train[y]),2), "| y_test mean:", round(np.mean(dtf_test[y]),2))
+    print(dtf_train.shape[1], "features:", dtf_train.drop(y, axis=1).columns.to_list())
+    return dtf_train, dtf_test
+
+
+def rebalance(dtf, y, balance=None,  method="random", replace=True, size=1):
+    '''
+    Rebalances a dataset with up-sampling and down-sampling.
+    :parameter
+        :param dtf: dataframe - feature matrix dtf
+        :param y: str - column to use as target 
+        :param balance: str - "up", "down", if None just prints some stats
+        :param method: str - "random" for sklearn or "knn" for imblearn
+        :param size: num - 1 for same size of the other class, 0.5 for half of the other class
+    :return
+        rebalanced dtf
+    '''
+    ## check
+    print("--- situation ---")
+    check = dtf[y].value_counts().to_frame()
+    check["%"] = (check[y] / check[y].sum() *100).round(1).astype(str) + '%'
+    print(check)
+    print("tot:", check[y].sum())
+
+    ## sklearn
+    if balance is not None and method == "random":
+        ### set the major and minor class
+        major = check.index[0]
+        minor = check.index[1]
+        dtf_major = dtf[dtf[y]==major]
+        dtf_minor = dtf[dtf[y]==minor]
+
+        ### up-sampling
+        if balance == "up":
+            print("--- upsampling ---")
+            print("   randomly replicate observations from the minority class (Overfitting risk)")
+            dtf_minor = utils.resample(dtf_minor, replace=replace, random_state=123, n_samples=int(size*len(dtf_major)))
+            dtf_balanced = pd.concat([dtf_major, dtf_minor])
+
+        ### down-sampling
+        elif balance == "down":
+            print("--- downsampling ---")
+            print("   randomly remove observations of the majority class (Underfitting risk)")
+            dtf_minor = utils.resample(dtf_minor, replace=replace, random_state=123, n_samples=int(size*len(dtf_major)))
+            dtf_balanced = pd.concat([dtf_major, dtf_minor])
+
+    ## imblearn
+    if balance is not None and method == "knn":
+        ### up-sampling
+        if balance == "up":
+            print("--- upsampling ---")
+            print("   create synthetic observations from the minority class (Distortion risk)")
+            smote = imblearn.over_sampling.SMOTE(random_state=123)
+            dtf_balanced, y_values = smote.fit_sample(dtf.drop(y,axis=1), y=dtf[y])
+            dtf_balanced[y] = y_values
+       
+        ### down-sampling
+        elif balance == "down":
+            print("--- downsampling ---")
+            print("   select observations that don't affect performance (Underfitting risk)")
+            nn = imblearn.under_sampling.CondensedNearestNeighbour(random_state=123)
+            dtf_balanced, y_values = nn.fit_sample(dtf.drop(y,axis=1), y=dtf[y])
+            dtf_balanced[y] = y_values
+        
+    ## check rebalance
+    if balance is not None:
+        print("--- new situation ---")
+        check = dtf_balanced[y].value_counts().to_frame()
+        check["%"] = (check[y] / check[y].sum() *100).round(1).astype(str) + '%'
+        print(check)
+        print("tot:", check[y].sum())
+        return dtf_balanced
+    
+
+
+def fill_na(dtf, x, value=None):
+    '''
+    Replace Na with a specific value or mean for numerical and mode for categorical. 
+    '''
+    if value is None:
+        value = dtf[x].mean() if utils_recognize_type(dtf, x) == "num" else dtf[x].mode().iloc[0]
+        print("--- Replacing Nas with:", value, "---")
+        dtf[x] = dtf[x].fillna(value)
+        return dtf, value
+    else:
+        print("--- Replacing Nas with:", value, "---")
+        dtf[x] = dtf[x].fillna(value)
+        return dtf
 
 
 
