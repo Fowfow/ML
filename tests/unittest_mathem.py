@@ -5,12 +5,10 @@ import sys
 import os
 
 parent_directory = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
-#sys.path.append(parent_directory) 
-sys.path.append("../")
-
+sys.path.append(parent_directory) 
+# sys.path.append("../")
+print(sys.path)
 from tools.mathem import basic
-
-
 
 
 class TestMathem(unittest.TestCase):
@@ -21,8 +19,5 @@ class TestMathem(unittest.TestCase):
 
 
 
-        
-         
-# from tools.mathem import basic
 if __name__ == "__main__":
     unittest.main()

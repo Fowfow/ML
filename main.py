@@ -39,12 +39,12 @@ dtf_tit = dtf_tit.rename(columns={"Survived":"Y"})
 # dtf = dtf.rename(columns={"Survived":"Y"})
 
 # features=[]
-# data_analysis.freqdist_plot(dtf, "Y", figsize=(5, 3))
+# data_analysis.freqdist_plot(dtf_tit, "Cabin", top=10, figsize=(5, 3))
 # data_analysis.corr_matrix(dtf, method="pearson", negative=False, lst_filters=["Y"], figsize=(15, 1))
 # pps = data_analysis.pps_matrix(dtf, figsize=(15,1))
 # matrix_df = data_analysis.pps_matrix(dtf)
 # data_analysis.bivariate_plot(dtf, x="Age", y="Y", figsize=(10, 5))
-# coeff, p = data_analysis.test_corr(dtf, x="Sex", y="Y")
+# coeff, p = data_analysis.test_corr(dtf_tit, x="Sex", y="Y")
 # data_analysis.nan_analysis(dtf, na_x="Cabin", y="Survived", max_cat=20, figsize=(10,5))
 # data_analysis.cross_distributions(dtf, "Age", "Y", "Sex")
 # plt.show()
@@ -64,8 +64,6 @@ dtf_tit = dtf_tit.rename(columns={"Survived":"Y"})
 # plt.show()
 # ppscore.matrix(df)
 
-
-
 ############
 # CCS
 ############
@@ -77,15 +75,17 @@ dtf_ccs = dtf_ccs.rename(columns={"S":"Y"})
 # data_analysis.dtf_overview(dtf)
 # data_analysis.freqdist_plot(dtf, x="C1")
 # data_analysis.bivariate_plot(dtf, "C1", "C2")
-# data_analysis.nan_analysis(dtf, na_x="C1", y="C2")
+# data_analysis.nan_analysis(dtf_tit, na_x="Age", y="Y")  # USEFUL
 # data_analysis.ts_analysis(dtf, "Id", "C2")
-# data_analysis.cross_distributions(dtf, "C1", "C2", "S")
-# data_analysis.corr_matrix(dtf)
-# data_analysis.pps_matrix(dtf)
-# data_analysis.test_corr(dtf, x="C1", y="S")
-# data_analysis.dtf_partitioning(dtf, "S")
-# data_analysis.test_corr(dtf, "C2", "S")
-# train, test = data_analysis.dtf_partitioning(dtf, "S")
-dtf_tit_bal = data_analysis.rebalance(dtf_tit, y="Y", balance="up")
+# data_analysis.cross_distributions(dtf_tit, "Age", "Sex", "Y")
 
-print(dtf_tit_bal)
+# data_analysis.corr_matrix(dtf_tit)  # USEFUL
+# data_analysis.pps_matrix(dtf_tit)  # USEFUL
+# data_analysis.test_corr(dtf_tit, x="Age", y="Y")  # USEFUL
+# ret = data_analysis.data_preprocessing(dtf=dtf_tit, y="Y", processNas="mean",processCategorical=None,split=0.5, scale=None, task="classification")  # USEFUL
+# ret = data_analysis.data_preprocessing(dtf=dtf_tit, y="Y")  # USEFUL
+
+# data_analysis.dtf_partitioning(dtf_ccs, "Y")
+coeff, p = data_analysis.test_corr(dtf_tit, "Pclass", "Y")
+# train, test = data_analysis.dtf_partitioning(dtf_ccs, "S")
+# dtf_tit_bal = data_analysis.rebalance(dtf_tit, y="Y", balance="up")
