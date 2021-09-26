@@ -5,9 +5,9 @@ import sys
 import os
 
 parent_directory = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
-sys.path.append(parent_directory) 
-# sys.path.append("../")
-print(sys.path)
+# sys.path.append(parent_directory) 
+sys.path.append("../")
+# print(sys.path)
 from tools.mathem import basic
 
 

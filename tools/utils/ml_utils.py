@@ -547,12 +547,7 @@ Transforms a categorical column into dummy columns
     :param dtf: dataframe - feature matrix dtf
     :param x: str - column name
     :param dropx: logic - whether the x column should be dropped
-:returnfowler
-
-fowler
-fowler
-fowler
-
+:return
     dtf with dummy columns added
 '''
 def add_dummies(dtf, x, dropx=False):
