@@ -2,7 +2,6 @@
 
 
 ## for data
-from numpy.core.numeric import False_
 import pandas as pd
 import numpy as np
 ## for plotting
@@ -84,11 +83,11 @@ dtf_tit=dtf_tit[features+["Y"]]
 print('-------------------------')
 print('DTF preprocessing')
 print('-------------------------')    
-data_analysis.dtf_overview(dtf_tit, figsize = (15,15), filename="pre_overview.png")
+data_analysis.dtf_overview(dtf_tit, figsize = (15,15), filename="ML/0_pre_overview.png")
 ret = data_analysis.data_preprocessing(dtf=dtf_tit, y="Y", processNas="mean", processCategorical=["Sex", "Embarked", "Pclass", "Cabin_section"],
                                         split=None, scale="minmax", task="classification")
 dtf_tit = ret["dtf"]
-data_analysis.dtf_overview(dtf_tit, figsize = (15,15), filename="post_overview.png")
+data_analysis.dtf_overview(dtf_tit, figsize = (15,15), filename="ML/1_post_overview.png")
 # Splitting
 dtf_train, dtf_test = data_analysis.dtf_partitioning(dtf_tit, y="Y", test_size=0.3, shuffle=False)
 dtf_train = data_analysis.pop_columns(dtf=dtf_train, lst_cols=["Y"], where="end")
@@ -102,8 +101,8 @@ print('-------------------------')
 feature_selection_switch = True
 X_names = []
 if (feature_selection_switch):
-    pps = data_analysis.pps_matrix(dtf_train, lst_filters = [], annotation=True, figsize=(25,15))
-    dic_feat_sel = data_analysis.features_selection(dtf_train, y="Y", task="classification", top=10, figsize=(12,5))
+    pps = data_analysis.pps_matrix(dtf_train, lst_filters = [], annotation=True, figsize=(25,15), filename="ML/2_pps.png")
+    dic_feat_sel = data_analysis.features_selection(dtf_train, y="Y", task="classification", top=10, figsize=(12,5), filename="ML/2_features_selection.png")
     plt.show()
     # -- Feature importance ---#
     model = ensemble.RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=0, n_jobs = 20)
@@ -113,7 +112,7 @@ if (feature_selection_switch):
     # --
     feat_imp = data_analysis.features_importance(   X=dtf_train.drop("Y",axis=1).values, y=dtf_train["Y"].values, 
                                                     X_names=dtf_train.drop("Y",axis=1).columns.tolist(), 
-                                                    model=model, task="classification", figsize=(15, 13))
+                                                    model=model, task="classification", figsize=(15, 13), filename="ML/3_features_importance.png")
     X_names = feat_imp["VARIABLE"].to_list()
 else:
     X_names = ["Age", "Fare", "Sex_male", "SibSp", "Pclass_3", "Parch", "Cabin_section_n", "Embarked_S", "Pclass_2",
@@ -127,10 +126,13 @@ y_train = dtf_train["Y"].values
 print('-------------------------')
 print('Model Design (hyperparameters tuning)')
 print('-------------------------')
-search_best_estimator_parameters_switch = False
+hypertune_switch = False
 model_XGB = ensemble.GradientBoostingClassifier() # see other options
 model_SVC = svm.SVC()
-if (search_best_estimator_parameters_switch):
+model={"XGB":model_XGB, "SVC":model_SVC}
+model_name = "XGB"
+if (hypertune_switch):
+    # estimator.get_params().keys()    
     param_dic = {"XGB":
                     {'learning_rate':[0.15,0.1,0.05,0.01,0.005,0.001],     #weighting factor for the corrections by new trees when added to the model
                     'n_estimators':[100,250,500,750,1000,1250,1500,1750],  #number of trees added to the model
@@ -144,56 +146,59 @@ if (search_best_estimator_parameters_switch):
                      "gamma": scipy.stats.expon(scale=.1),
                      "C": scipy.stats.expon(scale=100),
                      "class_weight": ["balanced", None]}
-                 }  
+                }  
     # Search for best estimator parameters
     # this takes a while
-    model = data_analysis.tune_classif_model(X_train, y_train, model_SVC, param_dic["SVC"], scoring="accuracy", searchtype="RandomSearch", n_iter=1000, cv=10, figsize=(10,5))
+    model[model_name] = data_analysis.tune_classif_model(X_train, y_train, model[model_name], param_dic[model_name], scoring="accuracy", searchtype="RandomSearch", n_iter=1000, cv=10, figsize=(10,5), filename1="ML/4_utils_kfold_roc.png", filename2="ML/5_utils_threshold_selection.png")
 else:
     # Instant best estimator parameters
-    best_params_XGB = {'subsample': 0.85, 'n_estimators': 100, 'min_samples_split': 2, 'min_samples_leaf': 5, 'max_features': 6, 'max_depth': 6, 'learning_rate': 0.05}
+    best_param_XGB = {'subsample': 0.85, 'n_estimators': 100, 'min_samples_split': 2, 'min_samples_leaf': 5, 'max_features': 6, 'max_depth': 6, 'learning_rate': 0.05}
     best_param_SVC = {}
-    model.set_params(**best_params_XGB)
+    best_param = {"XGB":best_param_XGB, "SVC":best_param_SVC}
+    model[model_name].set_params(**best_param[model_name])
     print("--- Kfold Validation ---")
     dic_scores = {  'accuracy':metrics.make_scorer(metrics.accuracy_score),
                     'precision':metrics.make_scorer(metrics.precision_score), 
                     'recall':metrics.make_scorer(metrics.recall_score),
                     'f1':metrics.make_scorer(metrics.f1_score)}
-    Kfold_base = model_selection.cross_validate(estimator=model, X=X_train, y=y_train, cv=10, scoring=dic_scores, n_jobs=20)
-    Kfold_model = model_selection.cross_validate(estimator=model, X=X_train, y=y_train, cv=10, scoring=dic_scores, n_jobs=20)
+    Kfold_base = model_selection.cross_validate(estimator=model[model_name], X=X_train, y=y_train, cv=10, scoring=dic_scores, n_jobs=20)
+    Kfold_model = model_selection.cross_validate(estimator=model[model_name], X=X_train, y=y_train, cv=10, scoring=dic_scores, n_jobs=20)
     for score in dic_scores.keys():
         print("\t", score, "mean - base model:", round(Kfold_base["test_"+score].mean(),2), " --> best model:", round(Kfold_model["test_"+score].mean(),2))
     kfold_roc_switch = True
-    if (kfold_roc_switch): data_analysis.utils_kfold_roc(model, X_train, y_train, cv=10, figsize=(10,5))
+    if (kfold_roc_switch):
+        data_analysis.utils_kfold_roc(model[model_name], X_train, y_train, cv=10, figsize=(10,5), filename="ML/4_utils_kfold_roc.png")
     ## Threshold analysis
     print("--- Threshold Selection ---")
     select_threshold_switch = True
-    if (select_threshold_switch): data_analysis.utils_threshold_selection(model, X_train, y_train, figsize=(10,5))
-#-----------------
+    if (select_threshold_switch):
+        data_analysis.utils_threshold_selection(model[model_name], X_train, y_train, figsize=(10,5), filename="ML/5_utils_threshold_selection.png")
+############
 # Train/Test
-#-----------------
+############
 print('-------------------------')
 print('Fit (Train/Test) using the tuned classification model')
 print('-------------------------')
 X_test = dtf_test[X_names].values
 y_test = dtf_test["Y"].values
-model, predicted_prob, predicted = data_analysis.fit_ml_classif(model, X_train, y_train, X_test, threshold=0.5)
-#-----------------
+model[model_name], predicted_prob, predicted = data_analysis.fit_ml_classif(model[model_name], X_train, y_train, X_test, threshold=0.5)
+############
 # Evaluate the tuned classification model
-#-----------------
+############
 print('-------------------------')
 print('Evaluating the tuned classification model')
 print('-------------------------')
 evaluate_switch = True
-if (evaluate_switch): data_analysis.evaluate_classif_model(y_test, predicted, predicted_prob, figsize=(25,5))
-#-----------------
+if (evaluate_switch): data_analysis.evaluate_classif_model(y_test, predicted, predicted_prob, figsize=(25,5), filename="ML/6_evaluate_classif_model.png")
+############
 # Explainability
-#-----------------
+############
 explain_switch = True
 if (explain_switch):
     i = 3
     print("True:", y_test[i], "--> Pred:", int(predicted[i]), "| Prob:", np.round(np.max(predicted_prob[i]), 2))
-    data_analysis.explainer_shap(model, X_names, X_instance=X_test[i], X_train=None, task="classification", top=10)
-    data_analysis.explainer_lime(X_train, X_names, model, y_train, X_test[i], task="classification", top=10)
+    data_analysis.explainer_shap(model[model_name], X_names, X_instance=X_test[i], X_train=None, task="classification", top=10)
+    data_analysis.explainer_lime(X_train, X_names, model[model_name], y_train, X_test[i], task="classification", top=10, filename="ML/7_explainder_lime.png")
     plt.show()
 #-----------------
 # Visualization
@@ -205,78 +210,8 @@ visual_switch = False
 if (visual_switch):
     model2d = ensemble.GradientBoostingClassifier()
     model2d.set_params(**{'subsample':1, 'n_estimators':1750, 'min_samples_split':6, 'min_samples_leaf':1, 'max_depth':4, 'learning_rate':0.001})
-    data_analysis.plot2d_classif_model(X_train, y_train, X_test, y_test, model2d, annotate=False, figsize=(10,5))
+    data_analysis.plot2d_classif_model(X_train, y_train, X_test, y_test, model2d, annotate=False, figsize=(10,5), filename="ML/8_plot2d_classif_model.png")
 
-
-###############################
-# Deep learning
-###############################
-#-----
-# Feature selection
-#-----
-X_names = dtf_train.drop("Y", axis=1).columns.tolist()
-X_train = dtf_train.drop("Y", axis=1).values
-y_train = dtf_train["Y"].values
-X_test = dtf_test[X_names].values
-#----
-# Model Design
-#----
-print('-------------------------')
-print('Model Design (hyperparameters tuning)')
-print('-------------------------')
-### build ann
-# n_features = X_train.shape[1]
-# n_neurons = int(round((n_features + 1)/2))
-# switch = False_
-# model_dl = models.Sequential([
-#                             layers.Dense(input_dim=n_features, units=n_neurons,
-#                                          kernel_initializer='uniform', activation='relu'),
-#                             layers.Dropout(rate=0.2),
-#                             layers.Dense(units=n_neurons,
-#                                          kernel_initializer='uniform', activation='relu'),
-#                             layers.Dropout(rate=0.2),
-#                             layers.Dense(units=1, kernel_initializer='uniform', activation='sigmoid')
-#                             ])
-# if (switch):
-#     param_dic = {"SEQ":
-#                     {'learning_rate':[0.15,0.1,0.05,0.01,0.005,0.001],     #weighting factor for the corrections by new trees when added to the model
-#                     'n_estimators':[100,250,500,750,1000,1250,1500,1750],  #number of trees added to the model
-#                     'max_depth':[2,3,4,5,6,7],                             #maximum depth of the tree
-#                     'min_samples_split':[2,4,6,8,10,20,40,60,100],         #sets the minimum number of samples to split
-#                     'min_samples_leaf':[1,3,5,7,9],                        #the minimum number of samples to form a leaf
-#                     'max_features':[2,3,4,5,6,7],                          #square root of features is usually a good starting point
-#                     'subsample': [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]}     # the fraction of samples to be used for fitting the individual base learners. Values lower than 1 generally lead to a reduction of variance and an increase in bias.
-#                  }  
-#     # Search for best estimator parameters
-#     # this takes a while
-#     model_dl = data_analysis.tune_classif_model(X_train, y_train, model_SVC, param_dic["SEQ"], scoring="accuracy", searchtype="RandomSearch", n_iter=1000, cv=10, figsize=(10,5))    
-# else:
-#     # Instant best estimator parameters
-#     best_params = {'subsample': 0.85, 'n_estimators': 100, 'min_samples_split': 2, 'min_samples_leaf': 5, 'max_features': 6, 'max_depth': 6, 'learning_rate': 0.05}
-#     model_dl.set_params(**best_params)
-#     print("--- Kfold Validation ---")
-#     dic_scores = {  'accuracy':metrics.make_scorer(metrics.accuracy_score),
-#                     'precision':metrics.make_scorer(metrics.precision_score), 
-#                     'recall':metrics.make_scorer(metrics.recall_score),
-#                     'f1':metrics.make_scorer(metrics.f1_score)}
-#     Kfold_base = model_selection.cross_validate(estimator=model_dl, X=X_train, y=y_train, cv=10, scoring=dic_scores, n_jobs=20)
-#     Kfold_model = model_selection.cross_validate(estimator=model_dl, X=X_train, y=y_train, cv=10, scoring=dic_scores, n_jobs=20)
-#     for score in dic_scores.keys():
-#         print("\t", score, "mean - base model:", round(Kfold_base["test_"+score].mean(),2), " --> best model:", round(Kfold_model["test_"+score].mean(),2))
-#     kfold_roc_switch = False
-#     if (kfold_roc_switch): data_analysis.utils_kfold_roc(model_dl, X_train, y_train, cv=10, figsize=(10,5))
-#     ## Threshold analysis
-#     print("--- Threshold Selection ---")
-#     select_threshold_switch = False
-#     if (select_threshold_switch): data_analysis.utils_threshold_selection(model_dl, X_train, y_train, figsize=(10,5))
-#----
-# Train/test
-#----
-model_dl, predicted_prob, predicted = data_analysis.fit_dl_classif(X_train, y_train, X_test, model=None, batch_size=32, epochs=100, threshold=0.5)
-#--
-# Visualize
-#--
-data_analysis.visualize_nn(model_dl)
 
 
 

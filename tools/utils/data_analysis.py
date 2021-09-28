@@ -386,7 +386,7 @@ def corr_matrix(dtf, method="pearson", negative=True, lst_filters=[], annotation
     return dtf_corr
 
 
-def pps_matrix(dtf, annotation=True, lst_filters=[], figsize=(10,5)):
+def pps_matrix(dtf, annotation=True, lst_filters=[], figsize=(10,5), filename="pps.png"):
     '''
     Computes the pps matrix.
     :parameter
@@ -399,7 +399,7 @@ def pps_matrix(dtf, annotation=True, lst_filters=[], figsize=(10,5)):
     fig, ax = plt.subplots(figsize=figsize)
     sns.heatmap(dtf_pps, vmin=0, vmax=1, cmap="YlGnBu", linewidths=0.5, annot=True, ax=ax)
     plt.title("predictive power score")
-    fig.savefig("output/pps.png")
+    fig.savefig("output/" + filename)
     plt.show()
     return dtf_pps
 
@@ -710,7 +710,7 @@ def add_feature_clusters(dtf, x, dic_clusters_mapping, dropx=False):
 #                  FEATURES SELECTION                                         #
 ###############################################################################
 
-def features_selection(dtf, y, top=10, task="classification", figsize=(20,10)):
+def features_selection(dtf, y, top=10, task="classification", figsize=(20,10), filename="features_selection.png"):
     '''
     Performs features selections: by correlation (keeping the lowest p-value) and by lasso.
     :prameter
@@ -746,7 +746,7 @@ def features_selection(dtf, y, top=10, task="classification", figsize=(20,10)):
         dtf_features["method"] = dtf_features["method"].apply(lambda x: x.split()[0]+" + "+x.split()[1] if len(x.split())==2 else x)
         fig, ax = plt.subplots(figsize=figsize)
         sns.barplot(y="features", x="selection", hue="method", data=dtf_features.sort_values("selection", ascending=False), ax=ax, dodge=False)
-        fig.savefig("output/features_selection.png")
+        fig.savefig("output/" + filename)
 
         join_selected_features = list(set(pvalue_selected_features).intersection(regularization_selected_features))
         return {"anova(p_value)":pvalue_selected_features, "lasso(regularization)":regularization_selected_features, "join":join_selected_features}
@@ -756,9 +756,9 @@ def features_selection(dtf, y, top=10, task="classification", figsize=(20,10)):
         print(e)
 
 
-def features_importance(X, y, X_names, model=None, task="classification", figsize=(15,15)):
+def features_importance(X, y, X_names, model=None, task="classification", figsize=(15,15), filename="features_importance.png"):
     '''
-    Computes features importance.
+    Computes features importance : Features importance is computed from how much each feature decreases the entropy in a tree.
     :parameter
         :param X: array
         :param X_names: list
@@ -795,14 +795,14 @@ def features_importance(X, y, X_names, model=None, task="classification", figsiz
     plt.xticks(rotation=70)
     plt.grid(axis='both')
     plt.show()
-    fig.savefig("output/features_importance.png")
+    fig.savefig("output/" + filename)
     return dtf_importances.reset_index()
 
 ###############################################################################
 #                   MODEL DESIGN & TESTING - CLASSIFICATION                   #
 ###############################################################################
 
-def utils_threshold_selection(model, X, y, figsize=(10,5)):
+def utils_threshold_selection(model, X, y, figsize=(10,5), filename="utils_threshold_selection.png"):
     '''
     Find the best classif threshold for metrics: accuracy, precision, recall, f1
     '''
@@ -828,11 +828,11 @@ def utils_threshold_selection(model, X, y, figsize=(10,5)):
     fig, ax = plt.subplots(figsize=figsize)
     ax.set(title="Threshold Selection", xlabel="Threshold", ylabel="Scores")
     dtf_scores.plot(ax=ax)
-    fig.savefig("output/threshold_selection.png")
+    fig.savefig("output/" + filename)
     plt.show()
 
 
-def utils_kfold_roc(model, X, y, cv=10, figsize=(10,5)):
+def utils_kfold_roc(model, X, y, cv=10, figsize=(10,5), filename="utils_kfold_roc.png"):
     '''
     Perform k-fold validation.
     '''
@@ -860,10 +860,10 @@ def utils_kfold_roc(model, X, y, cv=10, figsize=(10,5)):
     plt.title('K-Fold Validation')
     plt.legend(loc="lower right")
     plt.show()
-    fig.savefig("output/kfold_validation.png")
+    fig.savefig("output/" + filename)
 
 
-def tune_classif_model(X_train, y_train, model_base=None, param_dic=None, scoring="f1", searchtype="RandomSearch", n_iter=1000, cv=10, figsize=(10,5)):
+def tune_classif_model(X_train, y_train, model_base=None, param_dic=None, scoring="f1", searchtype="RandomSearch", n_iter=1000, cv=10, figsize=(10,5), filename1="tune_classif_model1.png", filename2="tune_classif_model2.png"):
     '''
     Tunes the hyperparameters of a sklearn classification model.
     :parameter
@@ -903,17 +903,17 @@ def tune_classif_model(X_train, y_train, model_base=None, param_dic=None, scorin
     Kfold_model = model_selection.cross_validate(estimator=model, X=X_train, y=y_train, cv=cv, scoring=dic_scores, n_jobs=20)
     for score in dic_scores.keys():
         print(score, "mean - base model:", round(Kfold_base["test_"+score].mean(),2), " --> best model:", round(Kfold_model["test_"+score].mean()))
-    utils_kfold_roc(model, X_train, y_train, cv=cv, figsize=figsize)
+    utils_kfold_roc(model, X_train, y_train, cv=cv, figsize=figsize, filename=filename1)
     
     ## Threshold analysis
     print("")
     print("--- Threshold Selection ---")
-    utils_threshold_selection(model, X_train, y_train, figsize=figsize)
+    utils_threshold_selection(model, X_train, y_train, figsize=figsize, filename=filename2)
     
     return model
 
 
-def evaluate_classif_model(y_test, predicted, predicted_prob, show_thresholds=True, figsize=(25,5)):
+def evaluate_classif_model(y_test, predicted, predicted_prob, show_thresholds=True, figsize=(25,5), filename="evaluate_classif_model.png"):
     '''
     Evaluates a model performance.
     :parameter
@@ -983,7 +983,7 @@ def evaluate_classif_model(y_test, predicted, predicted_prob, show_thresholds=Tr
                 thres_in_plot.append(t)
 
     plt.show()
-    fig.savefig("output/evaluate_classif_model.png")
+    fig.savefig("output/" + filename)
 
 
 def fit_ml_classif(model, X_train, y_train, X_test, threshold=0.5):
@@ -1008,10 +1008,10 @@ def fit_ml_classif(model, X_train, y_train, X_test, threshold=0.5):
     return model, predicted_prob, predicted
 
 
-'''
-Plot loss and metrics of keras training.
-'''
-def utils_plot_keras_training(training):
+def utils_plot_keras_training(training, filename="keras_training.png"):
+    '''
+    Plot loss and metrics of keras training.
+    '''
     metrics = [k for k in training.history.keys() if ("loss" not in k) and ("val" not in k)]
     fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True, figsize=(15,3))
     
@@ -1036,9 +1036,10 @@ def utils_plot_keras_training(training):
         ax22.plot(training.history['val_'+metric], label=metric)
     ax22.set_ylabel("Score", color="steelblue")
     plt.show()
+    fig.savefig("output/" + filename)
 
 
-def fit_dl_classif(X_train, y_train, X_test, model=None, batch_size=32, epochs=100, threshold=0.5):
+def fit_dl_classif(X_train, y_train, X_test, model=None, batch_size=32, epochs=100, threshold=0.5, filename="fit_dl_classif.png"):
     '''
     Fits a keras artificial/deep neural network.
     :parameter
@@ -1087,7 +1088,7 @@ def fit_dl_classif(X_train, y_train, X_test, model=None, batch_size=32, epochs=1
     verbose = 0 if epochs > 1 else 1
     training = model.fit(x=X_train, y=y_train, batch_size=batch_size, epochs=epochs, shuffle=True, verbose=verbose, validation_split=0.3)
     if epochs > 1:
-        utils_plot_keras_training(training)
+        utils_plot_keras_training(training, filename)
     
     ## test
     predicted_prob = training.model.predict(X_test)
@@ -1299,7 +1300,7 @@ def explainer_shap(model, X_names, X_instance, X_train=None, task="classificatio
                             features=X_instance, feature_names=X_names, max_display=top)
 
 
-def explainer_lime(X_train, X_names, model, y_train, X_instance, task="classification", top=10):
+def explainer_lime(X_train, X_names, model, y_train, X_instance, task="classification", top=10, filename="explainer_lime.png"):
     '''
     Use lime to build an explainer.
     :parameter
@@ -1319,7 +1320,7 @@ def explainer_lime(X_train, X_names, model, y_train, X_instance, task="classific
         dtf_explainer = pd.DataFrame(explained.as_list(), columns=['feature','effect'])
         fig = explained.as_pyplot_figure()
         fig.set_size_inches(18.5, 10.5)        
-        fig.savefig("output/lime_explainder.png")
+        fig.savefig("output/" + filename)
         
     elif task == "regression":
         explainer = lime_tabular.LimeTabularExplainer(training_data=X_train, feature_names=X_names, class_names="Y", mode=task)
@@ -1327,7 +1328,7 @@ def explainer_lime(X_train, X_names, model, y_train, X_instance, task="classific
         dtf_explainer = pd.DataFrame(explained.as_list(), columns=['feature','effect'])
         fig = explained.as_pyplot_figure()
         fig.set_size_inches(18.5, 10.5)
-        fig.savefig("output/lime_explainder.png")
+        fig.savefig("output/" + filename)
     
     return dtf_explainer
 
@@ -1351,7 +1352,7 @@ def utils_dimensionality_reduction(X_train, X_test, n_features=2):
     return X_train, X_test, model
 
 
-def plot2d_classif_model(X_train, y_train, X_test, y_test, model=None, annotate=False, figsize=(10,5)):
+def plot2d_classif_model(X_train, y_train, X_test, y_test, model=None, annotate=False, figsize=(10,5), filename="plot2d_classif_model.png"):
     '''
     Plots a 2d classification model result.
     :parameter
@@ -1387,7 +1388,7 @@ def plot2d_classif_model(X_train, y_train, X_test, y_test, model=None, annotate=
             ax.annotate(n, xy=(X_test[n,0], X_test[n,1]), textcoords='offset points', ha='left', va='bottom')
     plt.legend()
     plt.show()
-    fig.savefig("output/plot2d_classif_model.png")
+    fig.savefig("output/" + filename)
 
 
 '''
@@ -1440,7 +1441,7 @@ def utils_nn_config(model):
 '''
 Plot the structure of a keras neural network.
 '''
-def visualize_nn(model, titles=False, figsize=(10,8)):
+def visualize_nn(model, titles=False, figsize=(10,8), filename="visualize_nn.png"):
     ## get layers info
     lst_layers = utils_nn_config(model)
     layer_sizes, layer_infos = [], []
@@ -1504,6 +1505,7 @@ def visualize_nn(model, titles=False, figsize=(10,8)):
                 line = plt.Line2D([i*x_space+left, (i+1)*x_space+left], [layer_top_a-m*y_space, layer_top_b-o*y_space], c='k', alpha=0.5)
                 ax.add_artist(line)
     plt.show()
+    fig.savefig("output/" + filename)
 
 
 ###############################################################################
