@@ -2,6 +2,7 @@
 
 
 ## for data
+from numpy.core.numeric import False_
 import pandas as pd
 import numpy as np
 ## for plotting
@@ -10,13 +11,15 @@ from scipy.sparse import data
 # from scipy.sparse import data
 import seaborn as sns
 ## for statistical tests
-# import scipy
+import scipy
 # import statsmodels.formula.api as smf
 # import statsmodels.api as sm
 import ppscore
 ## for machine learning
 # from sklearn import model_selection, preprocessing, feature_selection, ensemble, linear_model, metrics, decomposition
-from sklearn import ensemble, model_selection, metrics
+from sklearn import ensemble, model_selection, metrics, svm
+## for deep learning
+from tensorflow.keras import models, layers
 ## for explainer
 # from lime import lime_tabular
 
@@ -123,25 +126,34 @@ y_train = dtf_train["Y"].values
 # Model Design
 ############
 print('-------------------------')
-print('Model Design')
+print('Model Design (hyperparameters tuning)')
 print('-------------------------')
 search_best_estimator_parameters_switch = False
-model = ensemble.GradientBoostingClassifier() # see other options
+model_XGB = ensemble.GradientBoostingClassifier() # see other options
+model_SVC = svm.SVC()
 if (search_best_estimator_parameters_switch):
-    param_dic = {'learning_rate':[0.15,0.1,0.05,0.01,0.005,0.001],      #weighting factor for the corrections by new trees when added to the model
-                 'n_estimators':[100,250,500,750,1000,1250,1500,1750],  #number of trees added to the model
-                 'max_depth':[2,3,4,5,6,7],                             #maximum depth of the tree
-                 'min_samples_split':[2,4,6,8,10,20,40,60,100],         #sets the minimum number of samples to split
-                 'min_samples_leaf':[1,3,5,7,9],                        #the minimum number of samples to form a leaf
-                 'max_features':[2,3,4,5,6,7],                          #square root of features is usually a good starting point
-                 'subsample':[0.7,0.75,0.8,0.85,0.9,0.95,1]}            #the fraction of samples to be used for fitting the individual base learners. Values lower than 1 generally lead to a reduction of variance and an increase in bias.
+    param_dic = {"XGB":
+                    {'learning_rate':[0.15,0.1,0.05,0.01,0.005,0.001],     #weighting factor for the corrections by new trees when added to the model
+                    'n_estimators':[100,250,500,750,1000,1250,1500,1750],  #number of trees added to the model
+                    'max_depth':[2,3,4,5,6,7],                             #maximum depth of the tree
+                    'min_samples_split':[2,4,6,8,10,20,40,60,100],         #sets the minimum number of samples to split
+                    'min_samples_leaf':[1,3,5,7,9],                        #the minimum number of samples to form a leaf
+                    'max_features':[2,3,4,5,6,7],                          #square root of features is usually a good starting point
+                    'subsample': [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]},    # the fraction of samples to be used for fitting the individual base learners. Values lower than 1 generally lead to a reduction of variance and an increase in bias.
+                 "SVC":
+                    {"kernel": ["rbf", "linear"],
+                     "gamma": scipy.stats.expon(scale=.1),
+                     "C": scipy.stats.expon(scale=100),
+                     "class_weight": ["balanced", None]}
+                 }  
     # Search for best estimator parameters
     # this takes a while
-    model = data_analysis.tune_classif_model(X_train, y_train, model, param_dic, scoring="accuracy", searchtype="RandomSearch", n_iter=1000, cv=10, figsize=(10,5))
+    model = data_analysis.tune_classif_model(X_train, y_train, model_SVC, param_dic["SVC"], scoring="accuracy", searchtype="RandomSearch", n_iter=1000, cv=10, figsize=(10,5))
 else:
     # Instant best estimator parameters
-    best_params = {'subsample': 0.85, 'n_estimators': 100, 'min_samples_split': 2, 'min_samples_leaf': 5, 'max_features': 6, 'max_depth': 6, 'learning_rate': 0.05}
-    model.set_params(**best_params)
+    best_params_XGB = {'subsample': 0.85, 'n_estimators': 100, 'min_samples_split': 2, 'min_samples_leaf': 5, 'max_features': 6, 'max_depth': 6, 'learning_rate': 0.05}
+    best_param_SVC = {}
+    model.set_params(**best_params_XGB)
     print("--- Kfold Validation ---")
     dic_scores = {  'accuracy':metrics.make_scorer(metrics.accuracy_score),
                     'precision':metrics.make_scorer(metrics.precision_score), 
@@ -197,13 +209,75 @@ if (visual_switch):
     data_analysis.plot2d_classif_model(X_train, y_train, X_test, y_test, model2d, annotate=False, figsize=(10,5))
 
 
-
-
-
-
-
-
-
+###############################
+# Deep learning
+###############################
+#-----
+# Feature selection
+#-----
+X_names = dtf_train.drop("Y", axis=1).columns.tolist()
+X_train = dtf_train.drop("Y", axis=1).values
+y_train = dtf_train["Y"].values
+X_test = dtf_test[X_names].values
+#----
+# Model Design
+#----
+print('-------------------------')
+print('Model Design (hyperparameters tuning)')
+print('-------------------------')
+### build ann
+# n_features = X_train.shape[1]
+# n_neurons = int(round((n_features + 1)/2))
+# switch = False_
+# model_dl = models.Sequential([
+#                             layers.Dense(input_dim=n_features, units=n_neurons,
+#                                          kernel_initializer='uniform', activation='relu'),
+#                             layers.Dropout(rate=0.2),
+#                             layers.Dense(units=n_neurons,
+#                                          kernel_initializer='uniform', activation='relu'),
+#                             layers.Dropout(rate=0.2),
+#                             layers.Dense(units=1, kernel_initializer='uniform', activation='sigmoid')
+#                             ])
+# if (switch):
+#     param_dic = {"SEQ":
+#                     {'learning_rate':[0.15,0.1,0.05,0.01,0.005,0.001],     #weighting factor for the corrections by new trees when added to the model
+#                     'n_estimators':[100,250,500,750,1000,1250,1500,1750],  #number of trees added to the model
+#                     'max_depth':[2,3,4,5,6,7],                             #maximum depth of the tree
+#                     'min_samples_split':[2,4,6,8,10,20,40,60,100],         #sets the minimum number of samples to split
+#                     'min_samples_leaf':[1,3,5,7,9],                        #the minimum number of samples to form a leaf
+#                     'max_features':[2,3,4,5,6,7],                          #square root of features is usually a good starting point
+#                     'subsample': [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1]}     # the fraction of samples to be used for fitting the individual base learners. Values lower than 1 generally lead to a reduction of variance and an increase in bias.
+#                  }  
+#     # Search for best estimator parameters
+#     # this takes a while
+#     model_dl = data_analysis.tune_classif_model(X_train, y_train, model_SVC, param_dic["SEQ"], scoring="accuracy", searchtype="RandomSearch", n_iter=1000, cv=10, figsize=(10,5))    
+# else:
+#     # Instant best estimator parameters
+#     best_params = {'subsample': 0.85, 'n_estimators': 100, 'min_samples_split': 2, 'min_samples_leaf': 5, 'max_features': 6, 'max_depth': 6, 'learning_rate': 0.05}
+#     model_dl.set_params(**best_params)
+#     print("--- Kfold Validation ---")
+#     dic_scores = {  'accuracy':metrics.make_scorer(metrics.accuracy_score),
+#                     'precision':metrics.make_scorer(metrics.precision_score), 
+#                     'recall':metrics.make_scorer(metrics.recall_score),
+#                     'f1':metrics.make_scorer(metrics.f1_score)}
+#     Kfold_base = model_selection.cross_validate(estimator=model_dl, X=X_train, y=y_train, cv=10, scoring=dic_scores, n_jobs=20)
+#     Kfold_model = model_selection.cross_validate(estimator=model_dl, X=X_train, y=y_train, cv=10, scoring=dic_scores, n_jobs=20)
+#     for score in dic_scores.keys():
+#         print("\t", score, "mean - base model:", round(Kfold_base["test_"+score].mean(),2), " --> best model:", round(Kfold_model["test_"+score].mean(),2))
+#     kfold_roc_switch = False
+#     if (kfold_roc_switch): data_analysis.utils_kfold_roc(model_dl, X_train, y_train, cv=10, figsize=(10,5))
+#     ## Threshold analysis
+#     print("--- Threshold Selection ---")
+#     select_threshold_switch = False
+#     if (select_threshold_switch): data_analysis.utils_threshold_selection(model_dl, X_train, y_train, figsize=(10,5))
+#----
+# Train/test
+#----
+model_dl, predicted_prob, predicted = data_analysis.fit_dl_classif(X_train, y_train, X_test, model=None, batch_size=32, epochs=100, threshold=0.5)
+#--
+# Visualize
+#--
+data_analysis.visualize_nn(model_dl)
 
 
 

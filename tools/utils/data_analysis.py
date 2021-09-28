@@ -23,6 +23,7 @@ import imblearn
 
 ## for deep learning
 from tensorflow.keras import models, layers
+from tensorflow.keras import backend as K
 import minisom
 
 ## for explainer
@@ -1030,19 +1031,19 @@ def utils_plot_keras_training(training):
     plt.show()
 
 
-'''
-Fits a keras artificial/deep neural network.
-:parameter
-    :param X_train: array
-    :param y_train: array
-    :param X_test: array
-    :param batch_size: num - keras batch
-    :param epochs: num - keras epochs
-    :param threshold: num - predictions > threshold are 1, otherwise 0
-:return
-    model fitted and predictions
-'''
 def fit_dl_classif(X_train, y_train, X_test, model=None, batch_size=32, epochs=100, threshold=0.5):
+    '''
+    Fits a keras artificial/deep neural network.
+    :parameter
+        :param X_train: array
+        :param y_train: array
+        :param X_test: array
+        :param batch_size: num - keras batch
+        :param epochs: num - keras epochs
+        :param threshold: num - predictions > threshold are 1, otherwise 0
+    :return
+        model fitted and predictions
+    '''
     ## model
     if model is None:
         ### define F1 metrics for Keras
