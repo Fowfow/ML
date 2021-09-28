@@ -6,14 +6,14 @@ import pandas as pd
 import numpy as np
 ## for plotting
 import matplotlib.pyplot as plt
-from scipy.sparse import data
 # from scipy.sparse import data
-import seaborn as sns
+# from scipy.sparse import data
+# import seaborn as sns
 ## for statistical tests
 # import scipy
 # import statsmodels.formula.api as smf
 # import statsmodels.api as sm
-import ppscore
+# import ppscore
 ## for machine learning
 # from sklearn import model_selection, preprocessing, feature_selection, ensemble, linear_model, metrics, decomposition
 from sklearn import ensemble, model_selection, metrics
@@ -24,10 +24,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 ## Data Analysis
-from tools.utils import data_analysis, ml_utils
+from tools.utils import data_analysis
 from input_data.generate_input import generate_input_csv
-
-
 
 ################
 # Import data
@@ -83,10 +81,11 @@ dtf_tit=dtf_tit[features+["Y"]]
 print('-------------------------')
 print('DTF preprocessing')
 print('-------------------------')    
+data_analysis.dtf_overview(dtf_tit, figsize = (15,15), filename="pre_overview.png")
 ret = data_analysis.data_preprocessing(dtf=dtf_tit, y="Y", processNas="mean", processCategorical=["Sex", "Embarked", "Pclass", "Cabin_section"],
                                         split=None, scale="minmax", task="classification")
 dtf_tit = ret["dtf"]
-# data_analysis.dtf_overview(dtf_tit)
+data_analysis.dtf_overview(dtf_tit, figsize = (15,15), filename="post_overview.png")
 # Splitting
 dtf_train, dtf_test = data_analysis.dtf_partitioning(dtf_tit, y="Y", test_size=0.3, shuffle=False)
 dtf_train = data_analysis.pop_columns(dtf=dtf_train, lst_cols=["Y"], where="end")
@@ -97,11 +96,11 @@ dtf_train = data_analysis.pop_columns(dtf=dtf_train, lst_cols=["Y"], where="end"
 print('-------------------------')
 print('Feature Selection')
 print('-------------------------')
-feature_selection_switch = False
+feature_selection_switch = True
 X_names = []
 if (feature_selection_switch):
-    pps = data_analysis.pps_matrix(dtf_train, lst_filters = ["Y"], annotation=True, figsize=(15,7))
-    dic_feat_sel = data_analysis.features_selection(dtf_train, y="Y", task="classification", top=10, figsize=(10,5))
+    pps = data_analysis.pps_matrix(dtf_train, lst_filters = [], annotation=True, figsize=(25,15))
+    dic_feat_sel = data_analysis.features_selection(dtf_train, y="Y", task="classification", top=10, figsize=(12,5))
     plt.show()
     # -- Feature importance ---#
     model = ensemble.RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=0, n_jobs = 20)
@@ -111,7 +110,7 @@ if (feature_selection_switch):
     # --
     feat_imp = data_analysis.features_importance(   X=dtf_train.drop("Y",axis=1).values, y=dtf_train["Y"].values, 
                                                     X_names=dtf_train.drop("Y",axis=1).columns.tolist(), 
-                                                    model=model, task="classification", figsize=(15,5))
+                                                    model=model, task="classification", figsize=(15, 13))
     X_names = feat_imp["VARIABLE"].to_list()
 else:
     X_names = ["Age", "Fare", "Sex_male", "SibSp", "Pclass_3", "Parch", "Cabin_section_n", "Embarked_S", "Pclass_2",
@@ -151,11 +150,11 @@ else:
     Kfold_model = model_selection.cross_validate(estimator=model, X=X_train, y=y_train, cv=10, scoring=dic_scores, n_jobs=20)
     for score in dic_scores.keys():
         print("\t", score, "mean - base model:", round(Kfold_base["test_"+score].mean(),2), " --> best model:", round(Kfold_model["test_"+score].mean(),2))
-    kfold_roc_switch = False
+    kfold_roc_switch = True
     if (kfold_roc_switch): data_analysis.utils_kfold_roc(model, X_train, y_train, cv=10, figsize=(10,5))
     ## Threshold analysis
     print("--- Threshold Selection ---")
-    select_threshold_switch = False
+    select_threshold_switch = True
     if (select_threshold_switch): data_analysis.utils_threshold_selection(model, X_train, y_train, figsize=(10,5))
 #-----------------
 # Train/Test
@@ -172,12 +171,12 @@ model, predicted_prob, predicted = data_analysis.fit_ml_classif(model, X_train, 
 print('-------------------------')
 print('Evaluating the tuned classification model')
 print('-------------------------')
-evaluate_switch = False
+evaluate_switch = True
 if (evaluate_switch): data_analysis.evaluate_classif_model(y_test, predicted, predicted_prob, figsize=(25,5))
 #-----------------
 # Explainability
 #-----------------
-explain_switch = False
+explain_switch = True
 if (explain_switch):
     i = 3
     print("True:", y_test[i], "--> Pred:", int(predicted[i]), "| Prob:", np.round(np.max(predicted_prob[i]), 2))

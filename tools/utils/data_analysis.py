@@ -55,7 +55,7 @@ def utils_recognize_type(dtf, col, max_cat=20):
         return "num"
 
 
-def dtf_overview(dtf, max_cat=20, figsize=(10,5)):
+def dtf_overview(dtf, max_cat=20, figsize=(15,10), filename="overiview.png"):
     '''
     Get a general overview of a dataframe.
     :parameter
@@ -93,6 +93,7 @@ def dtf_overview(dtf, max_cat=20, figsize=(10,5)):
             heatmap[k] = heatmap[k].apply(lambda x: 0 if x is False else 1)
     sns.heatmap(heatmap, vmin=0, vmax=1, cbar=False, ax=ax).set_title('Dataset Overview')
     #plt.setp(plt.xticks()[1], rotation=0)
+    fig.savefig("output/"+filename)
     plt.show()
     
     ## add legend
@@ -397,6 +398,7 @@ def pps_matrix(dtf, annotation=True, lst_filters=[], figsize=(10,5)):
     fig, ax = plt.subplots(figsize=figsize)
     sns.heatmap(dtf_pps, vmin=0, vmax=1, cmap="YlGnBu", linewidths=0.5, annot=True, ax=ax)
     plt.title("predictive power score")
+    fig.savefig("output/pps.png")
     plt.show()
     return dtf_pps
 
@@ -743,7 +745,8 @@ def features_selection(dtf, y, top=10, task="classification", figsize=(20,10)):
         dtf_features["method"] = dtf_features["method"].apply(lambda x: x.split()[0]+" + "+x.split()[1] if len(x.split())==2 else x)
         fig, ax = plt.subplots(figsize=figsize)
         sns.barplot(y="features", x="selection", hue="method", data=dtf_features.sort_values("selection", ascending=False), ax=ax, dodge=False)
-               
+        fig.savefig("output/features_selection.png")
+
         join_selected_features = list(set(pvalue_selected_features).intersection(regularization_selected_features))
         return {"anova(p_value)":pvalue_selected_features, "lasso(regularization)":regularization_selected_features, "join":join_selected_features}
     
@@ -752,7 +755,7 @@ def features_selection(dtf, y, top=10, task="classification", figsize=(20,10)):
         print(e)
 
 
-def features_importance(X, y, X_names, model=None, task="classification", figsize=(10,10)):
+def features_importance(X, y, X_names, model=None, task="classification", figsize=(15,15)):
     '''
     Computes features importance.
     :parameter
@@ -791,6 +794,7 @@ def features_importance(X, y, X_names, model=None, task="classification", figsiz
     plt.xticks(rotation=70)
     plt.grid(axis='both')
     plt.show()
+    fig.savefig("output/features_importance.png")
     return dtf_importances.reset_index()
 
 ###############################################################################
@@ -823,6 +827,7 @@ def utils_threshold_selection(model, X, y, figsize=(10,5)):
     fig, ax = plt.subplots(figsize=figsize)
     ax.set(title="Threshold Selection", xlabel="Threshold", ylabel="Scores")
     dtf_scores.plot(ax=ax)
+    fig.savefig("output/threshold_selection.png")
     plt.show()
 
 
@@ -854,6 +859,7 @@ def utils_kfold_roc(model, X, y, cv=10, figsize=(10,5)):
     plt.title('K-Fold Validation')
     plt.legend(loc="lower right")
     plt.show()
+    fig.savefig("output/kfold_validation.png")
 
 
 def tune_classif_model(X_train, y_train, model_base=None, param_dic=None, scoring="f1", searchtype="RandomSearch", n_iter=1000, cv=10, figsize=(10,5)):
@@ -976,6 +982,7 @@ def evaluate_classif_model(y_test, predicted, predicted_prob, show_thresholds=Tr
                 thres_in_plot.append(t)
 
     plt.show()
+    fig.savefig("output/evaluate_classif_model.png")
 
 
 def fit_ml_classif(model, X_train, y_train, X_test, threshold=0.5):
@@ -1309,13 +1316,17 @@ def explainer_lime(X_train, X_names, model, y_train, X_instance, task="classific
         explainer = lime_tabular.LimeTabularExplainer(training_data=X_train, feature_names=X_names, class_names=np.unique(y_train), mode=task)
         explained = explainer.explain_instance(X_instance, model.predict_proba, num_features=top)
         dtf_explainer = pd.DataFrame(explained.as_list(), columns=['feature','effect'])
-        explained.as_pyplot_figure()
+        fig = explained.as_pyplot_figure()
+        fig.set_size_inches(18.5, 10.5)        
+        fig.savefig("output/lime_explainder.png")
         
     elif task == "regression":
         explainer = lime_tabular.LimeTabularExplainer(training_data=X_train, feature_names=X_names, class_names="Y", mode=task)
         explained = explainer.explain_instance(X_instance, model.predict, num_features=top)
         dtf_explainer = pd.DataFrame(explained.as_list(), columns=['feature','effect'])
-        explained.as_pyplot_figure()
+        fig = explained.as_pyplot_figure()
+        fig.set_size_inches(18.5, 10.5)
+        fig.savefig("output/lime_explainder.png")
     
     return dtf_explainer
 
@@ -1351,15 +1362,15 @@ def plot2d_classif_model(X_train, y_train, X_test, y_test, model=None, annotate=
     '''
     ## n features > 2d
     if X_train.shape[1] > 2:
-        print("--- reducing dimensions to 2 ---")
+        print("\t", "--- reducing dimensions to 2 ---")
         X_train, X_test, pca = utils_dimensionality_reduction(X_train, X_test, n_features=2)
     ## fit 2d model
-    print("--- fitting 2d model ---")
+    print("\t", "--- fitting 2d model ---")
     model_2d = ensemble.GradientBoostingClassifier() if model is None else model
     model_2d.fit(X_train, y_train)
     
     ## plot predictions
-    print("--- plotting test set ---")
+    print("\t", "--- plotting test set ---")
     from matplotlib.colors import ListedColormap
     colors = {np.unique(y_test)[0]:"black", np.unique(y_test)[1]:"green"}
     X1, X2 = np.meshgrid(np.arange(start=X_test[:,0].min()-1, stop=X_test[:,0].max()+1, step=0.1),
@@ -1375,6 +1386,7 @@ def plot2d_classif_model(X_train, y_train, X_test, y_test, model=None, annotate=
             ax.annotate(n, xy=(X_test[n,0], X_test[n,1]), textcoords='offset points', ha='left', va='bottom')
     plt.legend()
     plt.show()
+    fig.savefig("output/plot2d_classif_model.png")
 
 
 '''
