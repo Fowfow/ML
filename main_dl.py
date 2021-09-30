@@ -20,6 +20,8 @@ from sklearn import ensemble, model_selection, metrics, svm
 ## for deep learning
 from tensorflow.keras import models, layers
 from keras.wrappers.scikit_learn import KerasClassifier
+import keras_tuner as kt
+
 ## for explainer
 # from lime import lime_tabular
 
@@ -75,7 +77,7 @@ print('-------------------------')
 feature_selection_switch = True
 X_names = []
 if (feature_selection_switch):
-    pps = data_analysis.pps_matrix(dtf_train, lst_filters = [], annotation=True, figsize=(25,15), filename="2_pps.png")
+    pps = data_analysis.pps_matrix(dtf_train, lst_filters = [], annotation=True, figsize=(25,15), filename="DL/2_pps.png")
     dic_feat_sel = data_analysis.features_selection(dtf_train, y="Y", task="classification", top=10, figsize=(12,5), filename="DL/2_features_selection.png")
     plt.show()
     # -- Feature importance ---#

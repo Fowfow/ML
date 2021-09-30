@@ -207,7 +207,7 @@ def freqdist_plot(dtf, x, max_cat=20, top=None, show_perc=True, bins=100, quanti
         print(e)
 
 
-def bivariate_plot(dtf, x, y, max_cat=20, figsize=(10,5)):
+def bivariate_plot(dtf, x, y, max_cat=20, figsize=(10,5), filename="bivariate_plot.png"):
     '''
     Plots a bivariate analysis.
     :parameter
@@ -233,6 +233,7 @@ def bivariate_plot(dtf, x, y, max_cat=20, figsize=(10,5)):
             ### joint plot
             sns.jointplot(x=x, y=y, data=dtf, dropna=True, kind='reg', height=int((figsize[0]+figsize[1])/2) )
             plt.show()
+            fig.savefig("output/" + filename)
 
         ## cat vs cat --> hist count + hist %
         elif (utils_recognize_type(dtf, x, max_cat) == "cat") & (utils_recognize_type(dtf, y, max_cat) == "cat"):  
@@ -259,6 +260,7 @@ def bivariate_plot(dtf, x, y, max_cat=20, figsize=(10,5)):
             # plt.close(2)
             # plt.close(3)
             plt.show()
+            fig.savefig("output/" + filename)
     
         ## num vs cat --> density + stacked + boxplot 
         else:
@@ -291,19 +293,20 @@ def bivariate_plot(dtf, x, y, max_cat=20, figsize=(10,5)):
             plt.close(2)
             plt.close(3)
             plt.show()
+            fig.savefig("output/" + filename)
         
     except Exception as e:
         print("--- got error ---")
         print(e)        
 
 
-def nan_analysis(dtf, na_x, y, max_cat=20, figsize=(10,5)):
+def nan_analysis(dtf, na_x, y, max_cat=20, figsize=(10,5), filename="nan_analysis.png"):
     '''
     Plots a bivariate analysis using Nan and not-Nan as categories.
     '''    
     dtf_NA = dtf[[na_x, y]]
     dtf_NA[na_x] = dtf[na_x].apply(lambda x: "Value" if not pd.isna(x) else "NA")
-    bivariate_plot(dtf_NA, x=na_x, y=y, max_cat=max_cat, figsize=figsize)
+    bivariate_plot(dtf_NA, x=na_x, y=y, max_cat=max_cat, figsize=figsize, filename=filename)
 
 
 def ts_analysis(dtf, x, y, max_cat=20, figsize=(10,5)):
@@ -318,7 +321,7 @@ def ts_analysis(dtf, x, y, max_cat=20, figsize=(10,5)):
     plt.show()
 
 
-def cross_distributions(dtf, x1, x2, y, max_cat=20, figsize=(10,5)):
+def cross_distributions(dtf, x1, x2, y, max_cat=20, figsize=(10,5), filename="cross_distributions.png"):
     '''
     plots multivariate analysis.
     '''    
@@ -355,6 +358,7 @@ def cross_distributions(dtf, x1, x2, y, max_cat=20, figsize=(10,5)):
         fig.colorbar(plot3d, shrink=0.5, aspect=5, label=y)
         ax.set(xlabel=x1, ylabel=x2, zlabel=y)
         plt.show()
+    fig.savefig("output/" + filename)    
      
 ###############################################################################
 #                         CORRELATION                                         #
