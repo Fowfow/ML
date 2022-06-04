@@ -1129,7 +1129,7 @@ def fit_ml_regr(model, X_train, y_train, X_test, scalerY=None):
 '''
 Tunes the hyperparameters of a sklearn regression model.
 '''
-def tune_regr_model(X_train, y_train, model_base=None, param_dic=None, scoring="r2", searchtype="RandomSearch", n_iter=1000, cv=10, figsize=(10,5)):
+def tune_regr_model(X_train, y_train, model_base=None, param_dic=None, scoring="r2", searchtype="RandomSearch", n_iter=1000, cv=10, figsize=(10,5), filename="tune_regr_model.png"):
     model_base = ensemble.GradientBoostingRegressor() if model_base is None else model_base
     param_dic = {'learning_rate':[0.15,0.1,0.05,0.01,0.005,0.001], 'n_estimators':[100,250,500,750,1000,1250,1500,1750], 'max_depth':[2,3,4,5,6,7]} if param_dic is None else param_dic                        
 
@@ -1171,7 +1171,7 @@ def tune_regr_model(X_train, y_train, model_base=None, param_dic=None, scoring="
     plt.title('K-Fold Validation')
     plt.legend()
     plt.show()
-    
+    fig.savefig("output/" + filename)
     return model
 
 
